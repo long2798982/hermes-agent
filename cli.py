@@ -7560,7 +7560,7 @@ class HermesCLI:
             self._approval_state = None
             self._approval_deadline = 0
             self._invalidate()
-            _cprint(f"\n{_DIM}  ⏱ Timeout — denying command{_RST}")
+            _cprint(f"\n{_DIM}  ⏱ 超时 — 已拒绝该命令{_RST}")
             return "deny"
 
     def _approval_choices(self, command: str, *, allow_permanent: bool = True) -> list[str]:
@@ -7639,14 +7639,82 @@ class HermesCLI:
         selected = state.get("selected", 0)
         show_full = state.get("show_full", False)
 
-        title = "⚠️  Dangerous Command"
+        # 中文翻译映射 — 仅用于 UI 显示，不影响白名单匹配逻辑
+        _desc_zh = {
+            "recursive deletion": "递归删除文件/目录",
+            "rm -rf /": "删除根目录（rm -rf /）",
+            "rm -rf /*": "删除根目录（rm -rf /*）",
+            "rm -rf ~": "删除用户主目录",
+            "rm -rf .": "删除当前目录",
+            "rm -rf *": "删除当前目录所有内容",
+            "rm -rf /usr": "删除系统核心目录",
+            "rm -rf /etc": "删除系统配置目录",
+            "rm -rf /var": "删除系统变量目录",
+            "rm -rf /home": "删除所有用户目录",
+            "rm -rf /tmp": "删除临时目录",
+            "rm -rf /opt": "删除软件安装目录",
+            "rm -rf /boot": "删除启动目录",
+            "rm -rf /dev": "删除设备文件目录",
+            "rm -rf /sys": "删除系统目录",
+            "rm -rf /lib": "删除系统库目录",
+            "rm -rf /bin": "删除系统二进制目录",
+            "rm -rf /sbin": "删除系统管理二进制目录",
+            "rm -rf /run": "删除运行时目录",
+            "rm -rf /mnt": "删除挂载目录",
+            "rm -rf /media": "删除媒体挂载目录",
+            "rm -rf /srv": "删除服务目录",
+            "rm -rf /proc": "删除进程目录",
+            "world/other-writable permissions": "设置全局可写权限 (777/666)",
+            "recursive world/other-writable (long flag)": "递归设置全局可写权限",
+            "recursive chown to root": "递归将文件所有者改为 root",
+            "recursive chown to root (long flag)": "递归将文件所有者改为 root",
+            "format filesystem": "格式化文件系统",
+            "disk copy": "磁盘拷贝 (dd)",
+            "write to block device": "写入块设备",
+            "SQL DROP": "SQL DROP 删除表/库",
+            "SQL DELETE without WHERE": "SQL DELETE 无 WHERE 条件",
+            "SQL TRUNCATE": "SQL TRUNCATE 清空表",
+            "overwrite system config": "覆盖系统配置文件",
+            "stop/restart system service": "停止/重启系统服务",
+            "kill all processes": "终止所有进程",
+            "force kill processes": "强制终止进程",
+            "fork bomb": "fork 炸弹",
+            "shell command via -c/-lc flag": "通过 -c/-lc 参数执行 shell 命令",
+            "script execution via -e/-c flag": "通过 -e/-c 参数执行脚本",
+            "pipe remote content to shell": "将远程内容通过管道传给 shell",
+            "execute remote script via process substitution": "通过进程替换执行远程脚本",
+            "overwrite system file via tee": "通过 tee 覆盖系统文件",
+            "overwrite system file via redirection": "通过重定向覆盖系统文件",
+            "xargs with rm": "xargs 搭配 rm 删除",
+            "find -exec rm": "find -exec rm 删除",
+            "find -delete": "find -delete 删除",
+            "stop/restart hermes gateway (kills running agents)": "停止/重启 hermes 网关（会终止运行中的 Agent）",
+            "hermes update (restarts gateway, kills running agents)": "hermes 更新（会重启网关，终止 Agent）",
+            "start gateway outside systemd (use 'systemctl --user restart hermes-gateway')": "在 systemd 外启动网关（请用 systemctl 管理）",
+            "kill hermes/gateway process (self-termination)": "终止 hermes/网关进程（自杀式操作）",
+            "kill process via pgrep expansion (self-termination)": "通过 pgrep 展开终止进程",
+            "kill process via backtick pgrep expansion (self-termination)": "通过反引号 pgrep 展开终止进程",
+            "copy/move file into /etc/": "复制/移动文件到 /etc/",
+            "in-place edit of system config": "就地编辑系统配置",
+            "in-place edit of system config (long flag)": "就地编辑系统配置",
+            "script execution via heredoc": "通过 heredoc 执行脚本",
+            "git reset --hard (destroys uncommitted changes)": "git reset --hard（丢失未提交的更改）",
+            "git force push (rewrites remote history)": "git force push（改写远程历史）",
+            "git force push short flag (rewrites remote history)": "git force push（改写远程历史）",
+            "git clean with force (deletes untracked files)": "git clean 强制清理（删除未跟踪文件）",
+            "git branch force delete": "git branch 强制删除分支",
+            "chmod +x followed by immediate execution": "chmod +x 后立即执行（可疑的两步操作）",
+        }
+        description = _desc_zh.get(description, description)
+
+        title = "⚠️  危险命令"
         cmd_display = command if show_full or len(command) <= 70 else command[:70] + '...'
         choice_labels = {
-            "once": "Allow once",
-            "session": "Allow for this session",
-            "always": "Add to permanent allowlist",
-            "deny": "Deny",
-            "view": "Show full command",
+            "once": "允许一次",
+            "session": "本次会话允许",
+            "always": "永久允许（加入白名单）",
+            "deny": "拒绝",
+            "view": "查看完整命令",
         }
 
         preview_lines = _wrap_panel_text(description, 60)
@@ -7703,7 +7771,7 @@ class HermesCLI:
         max_cmd_rows = max(1, available - chrome_rows - len(choice_wrapped))
         if len(cmd_wrapped) > max_cmd_rows:
             keep = max(1, max_cmd_rows - 1) if max_cmd_rows > 1 else 1
-            cmd_wrapped = cmd_wrapped[:keep] + ["… (command truncated — use /logs or /debug for full text)"]
+            cmd_wrapped = cmd_wrapped[:keep] + ["…（命令已截断 — 使用 /logs 或 /debug 查看完整内容）"]
 
         # Allocate any remaining rows to description. The extra -1 in full mode
         # accounts for the blank separator between choices and description.
@@ -7718,7 +7786,7 @@ class HermesCLI:
             desc_wrapped = []
         elif len(desc_wrapped) > available_for_desc:
             keep = max(1, available_for_desc - 1)
-            desc_wrapped = desc_wrapped[:keep] + ["… (description truncated)"]
+            desc_wrapped = desc_wrapped[:keep] + ["…（描述已截断）"]
 
         # Render: title → command → choices → description (description last so
         # any remaining overflow clips from the bottom of the least-critical

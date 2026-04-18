@@ -438,13 +438,13 @@ def prompt_dangerous_approval(command: str, description: str,
     try:
         while True:
             print()
-            print(f"  ⚠️  DANGEROUS COMMAND: {description}")
+            print(f"  ⚠️  危险命令: {description}")
             print(f"      {command}")
             print()
             if allow_permanent:
-                print("      [o]nce  |  [s]ession  |  [a]lways  |  [d]eny")
+                print("      [o] 允许一次  |  [s] 本次会话  |  [a] 永久允许  |  [d] 拒绝")
             else:
-                print("      [o]nce  |  [s]ession  |  [d]eny")
+                print("      [o] 允许一次  |  [s] 本次会话  |  [d] 拒绝")
             print()
             sys.stdout.flush()
 
@@ -467,23 +467,23 @@ def prompt_dangerous_approval(command: str, description: str,
 
             choice = result["choice"]
             if choice in ('o', 'once'):
-                print("      ✓ Allowed once")
+                print("      ✓ 已允许一次")
                 return "once"
             elif choice in ('s', 'session'):
-                print("      ✓ Allowed for this session")
+                print("      ✓ 本次会话已允许")
                 return "session"
             elif choice in ('a', 'always'):
                 if not allow_permanent:
-                    print("      ✓ Allowed for this session")
+                    print("      ✓ 本次会话已允许")
                     return "session"
-                print("      ✓ Added to permanent allowlist")
+                print("      ✓ 已加入永久白名单")
                 return "always"
             else:
-                print("      ✗ Denied")
+                print("      ✗ 已拒绝")
                 return "deny"
 
     except (EOFError, KeyboardInterrupt):
-        print("\n      ✗ Cancelled")
+        print("\n      ✗ 已取消")
         return "deny"
     finally:
         if "HERMES_SPINNER_PAUSE" in os.environ:

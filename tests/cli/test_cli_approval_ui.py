@@ -116,9 +116,9 @@ class TestCliApprovalUi:
         lines = rendered.splitlines()
 
         assert lines[0].startswith("╭")
-        assert "Dangerous Command" not in lines[0]
-        assert any("Dangerous Command" in line for line in lines[1:3])
-        assert "Show full command" in rendered
+        assert "危险命令" not in lines[0]
+        assert any("危险命令" in line for line in lines[1:3])
+        assert "查看完整命令" in rendered
         assert "githubcli-archive-keyring.gpg" not in rendered
 
     def test_approval_display_shows_full_command_after_view(self):
@@ -180,16 +180,16 @@ class TestCliApprovalUi:
 
         # Every choice must render — this is the core bug: approve/deny were
         # getting clipped off the bottom of the panel.
-        assert "Allow once" in rendered
-        assert "Allow for this session" in rendered
-        assert "Add to permanent allowlist" in rendered
-        assert "Deny" in rendered
+        assert "允许一次" in rendered
+        assert "本次会话允许" in rendered
+        assert "永久允许（加入白名单）" in rendered
+        assert "拒绝" in rendered
 
         # The bottom border must render (i.e. the panel is self-contained).
         assert rendered.rstrip().endswith("╯")
 
         # The description gets truncated — marker should appear.
-        assert "(description truncated)" in rendered
+        assert "（描述已截断）" in rendered
 
     def test_approval_display_skips_description_on_very_short_terminal(self):
         """On a 12-row terminal, only the command and choices have room.
@@ -217,8 +217,8 @@ class TestCliApprovalUi:
         # Command visible.
         assert "rm -rf /var/log/apache2/*.log" in rendered
         # All four choices visible.
-        for label in ("Allow once", "Allow for this session",
-                      "Add to permanent allowlist", "Deny"):
+        for label in ("允许一次", "本次会话允许",
+                      "永久允许（加入白名单）", "拒绝"):
             assert label in rendered, f"choice {label!r} missing"
 
     def test_approval_display_truncates_giant_command_in_view_mode(self):
@@ -248,9 +248,9 @@ class TestCliApprovalUi:
         rendered = "".join(text for _style, text in fragments)
 
         # All four choices visible even with a huge command.
-        for label in ("Allow once", "Allow for this session",
-                      "Add to permanent allowlist", "Deny"):
+        for label in ("允许一次", "本次会话允许",
+                      "永久允许（加入白名单）", "拒绝"):
             assert label in rendered, f"choice {label!r} missing"
 
         # Command got truncated with a marker.
-        assert "(command truncated" in rendered
+        assert "（命令已截断" in rendered
